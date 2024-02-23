@@ -13,7 +13,7 @@ extern "C" {
 #include "./error_costs.h"
 #include "./host.h"
 #include "tree_sitter/api.h"
-#include "tree_sitter/parser.h"
+#include "./parser.h"
 
 #define TS_TREE_STATE_NONE USHRT_MAX
 #define NULL_SUBTREE ((Subtree) {.ptr = NULL})
@@ -175,7 +175,7 @@ typedef struct {
 
 void ts_external_scanner_state_init(ExternalScannerState *, const char *, unsigned);
 const char *ts_external_scanner_state_data(const ExternalScannerState *);
-bool ts_external_scanner_state_eq(const ExternalScannerState *a, const char *, unsigned);
+bool ts_external_scanner_state_eq(const ExternalScannerState *self, const char *, unsigned);
 void ts_external_scanner_state_delete(ExternalScannerState *self);
 
 void ts_subtree_array_copy(SubtreeArray, SubtreeArray *);
@@ -200,7 +200,7 @@ Subtree ts_subtree_new_missing_leaf(SubtreePool *, TSSymbol, Length, uint32_t, c
 MutableSubtree ts_subtree_make_mut(SubtreePool *, Subtree);
 void ts_subtree_retain(Subtree);
 void ts_subtree_release(SubtreePool *, Subtree);
-int ts_subtree_compare(Subtree, Subtree);
+int ts_subtree_compare(Subtree, Subtree, SubtreePool *);
 void ts_subtree_set_symbol(MutableSubtree *, TSSymbol, const TSLanguage *);
 void ts_subtree_summarize(MutableSubtree, const Subtree *, uint32_t, const TSLanguage *);
 void ts_subtree_summarize_children(MutableSubtree, const TSLanguage *);
@@ -212,7 +212,7 @@ Subtree ts_subtree_last_external_token(Subtree);
 const ExternalScannerState *ts_subtree_external_scanner_state(Subtree self);
 bool ts_subtree_external_scanner_state_eq(Subtree, Subtree);
 
-#define SUBTREE_GET(self, name) (self.data.is_inline ? self.data.name : self.ptr->name)
+#define SUBTREE_GET(self, name) ((self).data.is_inline ? (self).data.name : (self).ptr->name)
 
 static inline TSSymbol ts_subtree_symbol(Subtree self) { return SUBTREE_GET(self, symbol); }
 static inline bool ts_subtree_visible(Subtree self) { return SUBTREE_GET(self, visible); }
@@ -301,12 +301,6 @@ static inline uint32_t ts_subtree_visible_descendant_count(Subtree self) {
   return (self.data.is_inline || self.ptr->child_count == 0)
     ? 0
     : self.ptr->visible_descendant_count;
-}
-
-static inline uint32_t ts_subtree_node_count(Subtree self) {
-  return
-    ts_subtree_visible_descendant_count(self) +
-    (ts_subtree_visible(self) ? 1 : 0);
 }
 
 static inline uint32_t ts_subtree_visible_child_count(Subtree self) {

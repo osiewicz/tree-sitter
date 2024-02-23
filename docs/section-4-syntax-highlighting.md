@@ -92,6 +92,11 @@ These keys specify basic information about the parser:
 
 * `path` (optional) - A relative path from the directory containing `package.json` to another directory containing the `src/` folder, which contains the actual generated parser. The default value is `"."` (so that `src/` is in the same folder as `package.json`), and this very rarely needs to be overridden.
 
+* `external-files` (optional) - A list of relative paths from the root dir of a
+parser to files that should be checked for modifications during recompilation.
+This is useful during development to have changes to other files besides scanner.c
+be picked up by the cli.
+
 ### Language Detection
 
 These keys help to decide whether the language applies to a given file:
@@ -362,8 +367,18 @@ All of these examples can be modeled in terms of a *parent* syntax tree and one 
 The language injection behavior can also be configured by some properties associated with patterns:
 
 * `injection.language` - can be used to hard-code the name of a specific language.
-* `injection.combined` - indicates that *all* of the matching nodes in the tree should have their content parsed as *one* nested document.
-* `injection.include-children` - indicates that the `@injection.content` node's *entire* text should be re-parsed, including the text of its child nodes. By default, child nodes' text will be *excluded* from the injected document.
+* `injection.combined` - indicates that *all* of the matching nodes in the tree
+  should have their content parsed as *one* nested document.
+* `injection.include-children` - indicates that the `@injection.content` node's
+  *entire* text should be re-parsed, including the text of its child nodes. By default,
+child nodes' text will be *excluded* from the injected document.
+* `injection.self` - indicates that the `@injection.content` node should be parsed
+  using the same language as the node itself. This is useful for cases where the
+  node's language is not known until runtime (e.g. via inheriting another language)
+* `injection.parent` indicates that the `@injection.content` node should be parsed
+  using the same language as the node's parent language. This is only meant for injections
+  that need to refer back to the parent language to parse the node's text inside
+  the injected language.
 
 #### Examples
 
@@ -428,6 +443,9 @@ var abc = function(d) {
     //    ^ string
     //          ^ variable
   }
+
+  baz();
+  ^ !variable
 };
 ```
 
@@ -438,3 +456,5 @@ From the Sublime text docs:
 > **Caret**: ^ this will test the following selector against the scope on the most recent non-test line. It will test it at the same column the ^ is in. Consecutive ^s will test each column against the selector.
 >
 > **Arrow**: <- this will test the following selector against the scope on the most recent non-test line. It will test it at the same column as the comment character is in.
+
+Note that an exclamation mark (`!`) can be used to negate a selector. For example, `!keyword` will match any scope that is not the `keyword` class.
